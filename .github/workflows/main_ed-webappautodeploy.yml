@@ -1,0 +1,73 @@
+# Docs for the Azure Web Apps Deploy action: https://github.com/Azure/webapps-deploy
+# More GitHub Actions for Azure: https://github.com/Azure/actions
+
+name: Build and deploy ASP.Net Core app to Azure Web App - ed-WebAppAutoDeploy
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    # This tells GitHub to run all 'dotnet' commands inside your subfolder
+    defaults:
+      run:
+        working-directory: WebAppAutoDeployInAzure 
+
+    permissions:
+      contents: read 
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up .NET Core
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.x'
+
+      - name: Build with dotnet
+        run: dotnet build --configuration Release
+
+      - name: dotnet publish
+        # We publish to a local folder named 'myapp' inside the subfolder
+        run: dotnet publish -c Release -o ./myapp
+
+      - name: Upload artifact for deployment job
+        uses: actions/upload-artifact@v4
+        with:
+          name: .net-app
+          # This path is relative to the REPOSITORY ROOT
+          path: WebAppAutoDeployInAzure/myapp
+
+  deploy:
+    runs-on: windows-latest
+    needs: build
+    permissions:
+      id-token: write 
+      contents: read 
+
+    steps:
+      - name: Download artifact from build job
+        uses: actions/download-artifact@v4
+        with:
+          name: .net-app
+      
+      - name: Login to Azure
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZUREAPPSERVICE_CLIENTID_BC04CB0357A34AAEB87929D2C6DAE744 }}
+          tenant-id: ${{ secrets.AZUREAPPSERVICE_TENANTID_902421B1BEFD4CB58EBFBAC36CCA2156 }}
+          subscription-id: ${{ secrets.AZUREAPPSERVICE_SUBSCRIPTIONID_2C3134FAEC4C4A79A57C86127C735C9E }}
+
+      - name: Deploy to Azure Web App
+        id: deploy-to-webapp
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: 'ed-WebAppAutoDeploy'
+          slot-name: 'Production'
+          # After downloading, the files are in the current root
+          package: .
