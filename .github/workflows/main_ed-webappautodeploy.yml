@@ -12,8 +12,14 @@ on:
 jobs:
   build:
     runs-on: windows-latest
+    
+    # This tells GitHub to run all 'dotnet' commands inside your subfolder
+    defaults:
+      run:
+        working-directory: WebAppAutoDeployInAzure 
+
     permissions:
-      contents: read #This is required for actions/checkout
+      contents: read 
 
     steps:
       - uses: actions/checkout@v4
@@ -27,20 +33,22 @@ jobs:
         run: dotnet build --configuration Release
 
       - name: dotnet publish
-        run: dotnet publish -c Release -o "${{env.DOTNET_ROOT}}/myapp"
+        # We publish to a local folder named 'myapp' inside the subfolder
+        run: dotnet publish -c Release -o ./myapp
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          # This path is relative to the REPOSITORY ROOT
+          path: WebAppAutoDeployInAzure/myapp
 
   deploy:
     runs-on: windows-latest
     needs: build
     permissions:
-      id-token: write #This is required for requesting the JWT
-      contents: read #This is required for actions/checkout
+      id-token: write 
+      contents: read 
 
     steps:
       - name: Download artifact from build job
@@ -61,5 +69,5 @@ jobs:
         with:
           app-name: 'ed-WebAppAutoDeploy'
           slot-name: 'Production'
+          # After downloading, the files are in the current root
           package: .
-          
